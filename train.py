@@ -1,60 +1,60 @@
+
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-import matplotlib.pyplot as plt
 
-# Dataset path
-train_dir = "dataset/train"
+SRC = r"C:\Users\sneha sidhwani\Downloads\Real vs Fake Faces\Real vs Fake Faces\6040"
 
-# Data preprocessing
-datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
+# MobileNetV2 preprocessing
+datagen = ImageDataGenerator(
+    preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input
+)
 
 train_data = datagen.flow_from_directory(
-    train_dir,
-    target_size=(224,224),
-    batch_size=16,
-    class_mode='binary',
-    subset='training'
+    SRC + r"\train",
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode="binary",
+    classes=["fake", "real"],
+    shuffle=True
 )
 
 val_data = datagen.flow_from_directory(
-    train_dir,
-    target_size=(224,224),
-    batch_size=16,
-    class_mode='binary',
-    subset='validation'
+    SRC + r"\valid",
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode="binary",
+    classes=["fake", "real"],
+    shuffle=False
 )
 
-# Model
-base_model = MobileNetV2(input_shape=(224,224,3), include_top=False, weights='imagenet')
-base_model.trainable = False
+base = MobileNetV2(
+    input_shape=(224, 224, 3),
+    include_top=False,
+    weights="imagenet"
+)
+base.trainable = False
 
 model = models.Sequential([
-    base_model,
+    base,
     layers.GlobalAveragePooling2D(),
-    layers.Dense(1, activation='sigmoid')
+    layers.Dropout(0.2),
+    layers.Dense(1, activation="sigmoid")
 ])
 
 model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
+    optimizer="adam",
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
 )
 
-# Training
-history = model.fit(
+model.fit(
     train_data,
     validation_data=val_data,
     epochs=3
 )
 
-# Save model
-model.save("fake_real_model.h5")
-
-# Plot accuracy
-plt.plot(history.history['accuracy'], label='train')
-plt.plot(history.history['val_accuracy'], label='val')
-plt.legend()
-plt.title("Accuracy")
-plt.show()
+model.save("backend/fake_real_model_v2.keras")
+print("NEW MODEL SAVED SUCCESSFULLY!")
+print("Class mapping:", train_data.class_indices)
